@@ -3,9 +3,6 @@
       acf_form_head(); 
       get_header(); 
 
-      // example of how to use basic selector to retrieve HTML contents
-      include('wp-content/themes/wp-gulpRemates/inc/simple_html_dom.php');
-
 
 //date("d/m/Y", strtotime(" -1 week"));
 /* The loop */ 
@@ -63,56 +60,6 @@
   
     
 
-// -----------------------------------------------------------------------------
-// scraping Saving
-    function scraping_generic($url, $search) {
-	// Didn't find it yet.
-	$return = false;
-
-	echo "reading the url: " . $url . "<br/>";
-      // create HTML DOM
-       $html = file_get_html($url);
-	   echo "url has been read.<br/>";
-
-      //para sacar el https
-      $curl = curl_init();
-      curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
-      curl_setopt($curl, CURLOPT_HEADER, false);
-      curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-      curl_setopt($curl, CURLOPT_URL, $url);
-      curl_setopt($curl, CURLOPT_REFERER, $url);
-      curl_setopt($curl, CURLOPT_RETURNTRANSFER, TRUE);
-      $str = curl_exec($curl);
-      curl_close($curl);
-                  
-      // Create a DOM object
-      $html_base = new simple_html_dom();
-      // Load HTML from a string
-      $html_base->load($str);
-
-
-      // Tomo todo el contenido total
-      foreach($html_base->find('div#main') as $e1)
-      $GLOBALS['myHtml'] =  $e1->outertext;
-   
-      // Update ACF load_pdf var with new value.
-      update_field( 'load_pdf', $contenidoGeneral, 3331 );
-      
-
-
-      // clean up memory
-      $html_base->clear();
-      unset($html_base);
-      //echo '//////////  Saved   /////////////////';
-      return;
-      }
-
-
-
-      //1  get DOM from URL or file
-      $newDate = date("d/m/Y", strtotime(FECHABusqueda));  
-      $url = 'https://www.imprentanacional.go.cr/boletin/?date='.$newDate;
-      scraping_generic($url, $search);
       
 
       

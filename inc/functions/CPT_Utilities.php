@@ -1,7 +1,59 @@
 <?php
 
+function quitar_tildes($cadena) {
+    $no_permitidas= array ("á","é","í","ó","ú","Á","É","Í","Ó","Ú","ñ","À","Ã","Ì","Ò","Ù","Ã™","Ã ","Ã¨","Ã¬","Ã²","Ã¹","ç","Ç","Ã¢","ê","Ã®","Ã´","Ã»","Ã‚","ÃŠ","ÃŽ","Ã”","Ã›","ü","Ã¶","Ã–","Ã¯","Ã¤","«","Ò","Ã","Ã„","Ã‹");
+    $permitidas= array ("a","e","i","o","u","A","E","I","O","U","n","N","A","E","I","O","U","a","e","i","o","u","c","C","a","e","i","o","u","A","E","I","O","U","u","o","O","i","a","e","U","I","A","E");
+    $texto = str_replace($no_permitidas, $permitidas ,$cadena);
+    return $texto;
+    }
 
 
+function arreglarFecha($fechadelRemate)
+    {
+        $fechadelRemate = str_replace("Setiembre", "Septiembre", $fechadelRemate);
+        $fechadelRemate = str_replace("setiembre", "septiembre", $fechadelRemate);
+        $fechadelRemate = str_replace(",", "", $fechadelRemate);
+        $fechadelRemate = str_replace(".", "", $fechadelRemate);
+
+        if (stripos($fechadelRemate, 'del') !== false) {
+        $fechadelRemate = preg_split('/ del /i', $fechadelRemate, 0);
+        
+        //Saco Año
+        $ano = $fechadelRemate[2];
+        $ano =  str_replace("dos mil veinte",       "2020", $ano); 
+        $ano =  str_replace("dos mil veintiuno",    "2021", $ano); 
+        $ano =  str_replace("dos mil veintidos",    "2022", $ano); 
+        $ano =  str_replace("dos mil veintitres",   "2023", $ano); 
+        $ano =  str_replace("dos mil veinticuatro", "2024", $ano); 
+        $ano =  str_replace("dos mil veinticinco",  "2025", $ano); 
+
+        //Saco Mes
+        $mes = $fechadelRemate[1];
+        $mesSplit = preg_split('/ de /i', $mes, 0);
+        $mes = $mesSplit[1];
+        $meses_ES = array("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre");
+        $meses_EN = array("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
+        $mes = str_replace($meses_ES, $meses_EN, $mes);
+
+
+        //Saco dia
+        $dia = $mesSplit[0];
+        $dia = wordsToNumber($dia);
+
+
+        //Saco hora
+        $hora = $fechadelRemate[0];
+    }
+
+    $fechadelRemate = array(
+        'ano'        => $ano,
+        'mes'        => $mes,
+        'dia'        => $dia,
+        'hora'       => $hora,
+    );
+
+    return $fechadelRemate;
+    }
 
 function wordsToNumber($data)
 {

@@ -1,72 +1,60 @@
 <?php
-require  $GLOBALS['themePath'].'/inc/simple_html_dom.php';
+if (  is_admin() ) {
+  require  $GLOBALS['themePath'].'/inc/functions/CPT_Utilities.php';
+  require  $GLOBALS['themePath'].'/inc/simple_html_dom.php';
+  date_default_timezone_set('America/Costa_Rica');
+}
 
+require  $GLOBALS['themePath'].'/inc/CTP_ReviewRemates.php';
 /*--------------------------------------------------------------
 >>> //crea la acciones para meter y salvar cuando le doy postear remates btn (post nuevos)
 ----------------------------------------------------------------*/
 
-$id;
-$publicacion;
-$precio;
-$precioShort;
-$moneda;
-$tipo_De_Remate;
-$rematante;
-$rematado;
-$juzgado;
-$expediente;  
-$fechadelRemate;
-$gravamen;
-$fechadelRemateNumeral;
-$horaRemate;
-
-//Casa  //Lote
-$matricula;
-$derecho;
-$distrito;
-$canton;
-$provincia;
-$plano;
-$mide;
-
-//Vehiculo
-$marca;
-$categoria;
-$carrocería;
-$capacidad;
 
   function makeRemates($array){
-   
-    
-    $buscar = $array[9];
 
-    echo 'Buscar ---------'.$buscar.'<br>';
-    echo '---------------------------'.'<br>';
-   
-
-    //finca vehículo  categoría: motocicleta automóvil carga liviana microbús embarcación 
-    $vehiculo = false;
-    $propieda = false;
-
-    //busco vehiculo si lo encuentra lo pongo true
-    if (stripos($buscar, 'vehiculo') !== false) {
-      $vehiculo = true;
-    echo 'xxxxxxxxxxxxx VEhiculo <br>';
-    }
-    //busco finca si lo encuentra lo pongo true
-    if (stripos($buscar, 'finca') !== false) {
-      $propieda = true;
-      echo 'xxxxxxxxxxxxx propieda <br>';
-    }
+    //ACF
+    $boletingId             = get_field('numero_boletin');
+    $RemateSettings_group   = get_field("btns", $GLOBALS['rematesPg']);  
+    $postRemates           = $RemateSettings_group['mostrar_o_postear']; 
+    $verDetalles           = $RemateSettings_group['ver_detalles']; 
+ 
 
 
-    $str = "/(con una base de |capacidad|marca|categoria|serie|fabricacion|color| combustible|soportando gravamenes|libre de gravamenes y anotaciones|libre de gravamenes prendarios|placas|ano|de no haber postores|se senalan|publicacion| .—)/";
-  
-   
+      //foreach ($array as $key => $value) {
+       //$itemFull = $array[$key];
+
+       $key = 50;
+       $itemFull = $array[$key];
+       $rematID = $boletingId.'_'.date("y").'_'.$key;
+
+      //finca vehículo  categoría: motocicleta automóvil carga liviana microbús embarcación 
+      $vehiculo = false;
+      $propieda = false;
+
+      //busco vehiculo si lo encuentra lo pongo true
+      if (stripos($itemFull, 'vehiculo') !== false) {
+        $vehiculo = true;
+        $tipoDeRemate = 'vehiculo';
+        echo 'xxxxxxxxxxxxx VEhiculo <br>';
+      }
+      //busco finca si lo encuentra lo pongo true
+      if (stripos($itemFull, 'finca') !== false) {
+        $propieda = true;
+        $tipoDeRemate = 'propiedad';
+        echo 'xxxxxxxxxxxxx propieda <br>';
+      }
+
+
+
+
+
+
+    $str = "/(con una base de |capacidad|marca|categoria|serie|fabricacion|color|matricula numero|derecho|combustible|soportando gravamenes|libre de gravamenes y anotaciones|notas|libre de gravamenes prendarios|placas|ano|de no haber postores|se senalan|publicacion|contra|expediente|ejecucion|juzgado| .—)/";
 
     if($vehiculo)
     {
-      $remateArray = preg_split($str, $buscar, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+      $remateArray = preg_split($str, $itemFull, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
       foreach ($remateArray as $key => $item)
       {
         //limpio lo que no sirve
@@ -79,17 +67,44 @@ $capacidad;
           $item =  str_replace(', n°','', $item);
           }
 
-        echo $item.' '.$key.'<br>';
+   
 
+          //Saco moneda
+          if (stripos($item, 'colones') !== false) {
+          $moneda =  'colones ';
+          }
+        if (stripos($item, 'dolares') !== false) {
+          $moneda =  'dolares ';
+          }
+
+            
         //Saco precio
         if (stripos($item, 'con una base de') !== false) {
-        $precio =  $remateArray[$key+1];
+          $precio =  $remateArray[$key+1];
+
+          if (stripos($precio, 'exactos') !== false) {
+            $precio =  str_replace('exactos','', $precio);
+          }
+          if (stripos($precio, 'colones ') !== false) {
+            $precio =  str_replace('colones ','', $precio);
+          }
+          if (stripos($precio, 'centavos') !== false) {
+            $precio =  str_replace('centavos ','', $precio);
+          }
+          if (stripos($precio, 'dolares') !== false) {
+            $precio =  str_replace('dolares ','', $precio);
+          }
+
         }
 
-        //gravamenes
-        if (stripos($item, 'gravamenes') !== false || stripos($item, 'gravamen') !== false || stripos($item, 'anotaciones') !== false) {
-        $gravamen =  $item;
-        }
+     
+
+        //Saco segundo remate
+        if (stripos($item, 'gravamenes') !== false) {
+          $gravamenes1 =  $item;
+          $gravamenes2 =  $remateArray[$key+1];
+          //
+          }
 
         //Saco estilo
         if (stripos($item, 'estilo') !== false) {
@@ -100,7 +115,14 @@ $capacidad;
         //Saco categoria
         if (stripos($item, 'categoria') !== false) {
         $categoria   =  $remateArray[$key+1];
+        }elseif (stripos($item, 'motocicleta') !== false) {
+        $tipoDeRemate = 'motocicleta';
+        }elseif(stripos($item, 'embarcacion') !== false) {
+          $tipoDeRemate = 'embarcacion';
+        }else {
+          $tipoDeRemate = 'vehiculo';
         }
+
 
         //Saco combustible:
         if (stripos($item, 'combustible') !== false) {
@@ -113,7 +135,25 @@ $capacidad;
         $capacidad = preg_split('/. /i', $remateArray[$key+1], 0);
         $capacidad   =  $remateArray[$key+1];
         }
-       
+
+     
+        //Saco segundo notas:  
+        if (stripos($item, 'notas') !== false) {
+          $notas  =  $remateArray[$key+1];
+          }  
+          //Saco segundo notas:  
+          if (stripos($item, 'ejecucion') !== false) {
+          $ejecuta  =  $remateArray[$key+1];
+          }  
+          //Saco segundo notas:  
+          if (stripos($item, 'contra') !== false) {
+          $contra   =  $remateArray[$key+1];
+          }  
+  
+          //Saco segundo juzgado :  
+          if (stripos($item, 'juzgado') !== false) {
+          $juzgado    =  $remateArray[$key+1];
+          } 
 
         //Saco carroceria
         if (stripos($item, 'carroceria') !== false) {
@@ -144,56 +184,167 @@ $capacidad;
         $marca   =  $marca[0];
         }
         //Saco fecha
-        if (stripos($item, 'se senalan') !== false) {
-        $fecha = preg_split('/con la base/i', $remateArray[$key+1], 0);
-        $fecha = $fecha[0];
+        if (stripos($item, 'se senalan') !== false) 
+        {
+          $fecha = preg_split('/con la base/i', $remateArray[$key+1], 0);
+          $fecha = $fecha[0];
+          $fechadelTextual = $fecha; 
+
+          //Devuelve array con todo des de CPT_Utilities ano, mes , dia, hora
+          $fechadelNumeral = arreglarFecha($fecha);
+          $hora = $fechadelNumeral['hora'];
+
+          ////////////////Numeral
+          $fechadelNumeral = $fechadelNumeral['dia'].'-'. $fechadelNumeral['mes'].'-'.$fechadelNumeral['ano'];
+
         }
 
         if (stripos($item, 'publicacion') !== false) {
           $publicacion = $remateArray[$key+1];
           }
-        
+        //Saco segundo expediente:  
+        if (stripos($item, 'expediente') !== false) {
+        $expediente   =  $remateArray[$key+1];
+        }
+
+      
+     
       } 
+     
+    
+      $value = array(
+        'numero_boletin'        => $boletingId,
+        'remateidnumber'        => $rematID,
+        'fechadelTextual'        => $fechadelTextual,
+        'fechadelNumeral'        => $fechadelNumeral,
+        'hora'                  => $hora,
+        'gravamenes'            => $gravamenes1.' '.$gravamenes2,
+        'tipo_de_remate'        => $tipoDeRemate,
+        'categoria'             => $categoria,
+        'precio'                => $precio,
+        'precio_numeral'        => wordsToNumber(' '.$precio),
+        'moneda'                => $moneda,
+        'marca'                 => $marca,
+        'placa'                 => $placa,
+        'ano'                   => $ano,
+        'estilo'                => $estilo,
+        'combustible'           => $combustible,
+        'caracteristicas'       => $serie.' '.$color. ''.$capacidad,
+        'rematante'             => $ejecuta,
+        'rematado'              => $contra,
+        'juzgado'               => $juzgado,
+        'expediente'            => $expediente,
+        'notas'                 => $notas,
+        'remateDetalle'         => $item,
+        'publicacion'           => $publicacion,
+    );
       //Imprimo carecteristicas vehiculo
-      echo '<br>'.
-      '<br> <b>Price: </b>'.$precio.
-      '<br><b>gravamen: </b>'.$gravamen.
-      '<br><b>categoria: </b>'.$categoria,
-      '<br><b>marca: </b>'.$marca,
-      '<br><b>placa: </b>'.$placa,
-      '<br><b>año: </b>'.$ano.
-      '<br><b>estilo: </b>'.$estilo.
-      '<br><b>combustible: </b>'.$combustible.
-      '<br><b>caracteristicas: </b>'.$serie.' '.$color. ''.$capacidad.
-      '<br><b>fecha: </b>'.$fecha.
-      '<br><b>publicacion: </b>'.$publicacion.
-      '<br>---------<br>';
+      // echo '<br>'.
+      // '<br> <b> $boletingId </b>'. $boletingId.
+      // '<br> <b>post ID: </b>'.$rematID.
+      // '<br> <b>Price: </b>'.$precio.
+      // '<br><b>gravamen: </b>'.$gravamenes1.' '.$gravamenes2.
+      // '<br><b>$horaRemate: </b>'.$horaRemate,
+      // '<br><b>$ejecuta : </b>'.$ejecuta,
+      // '<br><b>$contra : </b>'.$contra,
+      // '<br><b>juzgado : </b>'.$juzgado,
+      // '<br><b>publicacion : </b>'.$publicacion,
+      // '<br><b>expediente: </b>'.$expediente,
+      // '<br><b>notas: </b>'.$notas,
+
+   
+      // '<br><b>tipoDeRemate: </b>'.$tipoDeRemate,
+      // '<br><b>categoria: </b>'.$categoria,
+      // '<br><b>marca: </b>'.$marca,
+      // '<br><b>placa: </b>'.$placa,
+      // '<br><b>año: </b>'.$ano.
+      // '<br><b>estilo: </b>'.$estilo.
+      // '<br><b>combustible: </b>'.$combustible.
+      // '<br><b>caracteristicas: </b>'.$serie.' '.$color. ''.$capacidad.
+      // '<br>---------<br>';
      }
 
 
-     $strPropiedad1 = "/(de no haber postores, |.—)/";
-     $strPropiedad2 = "/(con una base de | libre de gravamenes | saquese a remate|matricula numero |derecho | la cual es | situada en el distrito | canton | de la provincia de | colinda |mide| plano | identificador predial | para tal efecto, se senalan |de no haber postores|notas| ejecucion hipotecaria de |contra |canton|colinda|publiquese este edicto |soportando gravamenes| la cual es terreno|expediente|juzgado |publicacion|terreno| .—)/";
+
+
+
+    
+
+     $strPropiedad1 = "/(segundo remate|.—)/";
+     $strPropiedad2 = "/(con la base de|con una base de|libre de gravamenes|saquese a remate|matricula numero|derecho|la cual es|situada en el distrito|canton|de la provincia de|colinda|mide|plano|identificador predial|para tal efecto, se senalan|notas|ejecucion hipotecaria de|contra|canton|colinda|publiquese este edicto|soportando gravamenes|la cual es terreno|expediente|juzgado|publicacion|terreno|en el mejor postor| .—)/";
      
      if($propieda)
      {
-       $remateArray = preg_split($strPropiedad1, $buscar, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
- 
-
-      $remateArray = preg_split($strPropiedad2, $buscar, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-       
-       foreach ($remateArray as $key => $item)
+     
+          
+       $remateArraySplit = preg_split($strPropiedad1, $itemFull, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+       foreach ($remateArraySplit as $key0 => $item0)
        {
-       
-         if (stripos($item, 'segundo remate ') !== false) {
-            unset($item);
-          }
-          //echo $key.' '.$item.'<br>';
-
-         //Saco segundo remate
-         if (stripos($item, 'con una base de') !== false) {
-          $precio =  $remateArray[$key+1];
-         //$precio =  str_replace(', libre de','', $precio);
+         if($key0 !== 0){
+          unset($remateArraySplit[$key0]);
          }
+       }
+
+       $remateArraySplit1 = preg_split($strPropiedad2, $remateArraySplit[0], 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+      $remateArrayFull = preg_split($strPropiedad2, $itemFull, 0, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+       
+
+     
+      foreach ($remateArraySplit1 as $key1 => $item1)
+      {
+          echo $item1.'<br>';
+            //Saco moneda
+            if (stripos($item1, 'colones') !== false) {
+            $moneda =  'colones ';
+            }
+          if (stripos($item1, 'dolares') !== false) {
+            $moneda =  'dolares ';
+            }
+                   //Saco precio  
+          if (stripos($item1, 'con una base') !== false || stripos($item1, 'con la base de') !== false) {
+            echo '------<br>';
+            var_dump($remateArraySplit1);
+            echo '------<br>';
+            $precio =  $remateArraySplit1[$key1+1];
+
+            if (stripos($precio, 'exactos') !== false) {
+              $precio =  str_replace('exactos','', $precio);
+            }
+            if (stripos($precio, 'colones ') !== false) {
+              $precio =  str_replace('colones ','', $precio);
+            }
+            if (stripos($precio, 'centavos') !== false) {
+              $precio =  str_replace('centavos ','', $precio);
+            }
+            if (stripos($precio, 'dolares') !== false) {
+              $precio =  str_replace('dolares ','', $precio);
+            }
+
+          }
+
+
+            //Saco segundo hora:  
+        if (stripos($item1, 'senalan') !== false) {
+          $horaRemate  =  $remateArraySplit1[$key+1];
+          }elseif(stripos($item1, 'minutos') !== false) {
+            $horaRemate = preg_split('/;/i', $item1, 0);
+            if (stripos($horaRemate[0], 'minutos') !== false) {
+              $horaRemate  =  $horaRemate[0];
+            }elseif(stripos($horaRemate[1], 'minutos') !== false){
+              $horaRemate  =  $horaRemate[1];
+            }else{
+              $horaRemate  =  $horaRemate[2];
+            }
+            
+          }
+      }
+
+
+       foreach ($remateArrayFull as $key => $item)
+       {
+        
+   
 
         //Saco segundo remate
         if (stripos($item, 'gravamenes') !== false) {
@@ -203,99 +354,161 @@ $capacidad;
         }
         //Saco segundo matricula
         if (stripos($item, 'matricula numero') !== false) {
-        $matricula =  $remateArray[$key+1];
+        $matricula =  $remateArrayFull[$key+1];
         }
 
         //Saco segundo derecho 
-        if (stripos($item, 'derecho ') !== false) {
-        $derecho  =  $remateArray[$key+1];
+        if (stripos($item, 'derecho') !== false) {
+        $derecho  =  $remateArrayFull[$key+1];
         }  
        
 
         //Saco provincia 
         if (stripos($item, 'provincia de') !== false) {
-        $provincia  =  $remateArray[$key+1];
-        $provincia = preg_split('/. colinda:/i', $provincia, 0);
-        $provincia = $provincia[0];
+       
+
+          if (stripos($item, 'linderos') !== false) {
+            $provincia = preg_split('/linderos/i', $provincia, 0);
+            $provincia = $provincia[0];
+          }else{
+            echo '----------<br>';
+            $provincia  =  $remateArrayFull[$key+1];
+            echo '----------'.$provincia;
+            echo '----------<br>';
+          }
+
+       
         }  
         
          //Saco segundo distrito 
         if (stripos($item, 'distrito') !== false) {
-        $distrito  =  $remateArray[$key+1];
+        $distrito  =  $remateArrayFull[$key+1];
         }  
          //Saco segundo canton 
         if (stripos($item, 'canton') !== false) {
-        $canton  =  $remateArray[$key+1];
+        $canton  =  $remateArrayFull[$key+1];
         }  
          //Saco segundo colinda: 
         if (stripos($item, 'colinda') !== false) {
-        $colinda  =  $remateArray[$key+1];
+        $colinda  =  $remateArrayFull[$key+1];
         }  
          //Saco segundo mide:  
         if (stripos($item, 'mide') !== false) {
-        $mide  =  $remateArray[$key+1];
+        $mide  =  $remateArrayFull[$key+1];
+
+        if (stripos($mide, '.') !== false) {
+          $mide = preg_split('/\. /i', $mide, 0);
+          $mide = $mide[0];
+        }
+
         }  
          //Saco segundo plano: 
         if (stripos($item, 'plano') !== false) {
-        $plano  =  $remateArray[$key+1];
+        $plano  =  $remateArrayFull[$key+1];
         }  
-         //Saco segundo hora:  
-        if (stripos($item, 'senalan') !== false) {
-        $horaRemate  =  $remateArray[$key+1];
-        }  
-
+       
         //Saco segundo terreno 
         if (stripos($item, 'terreno') !== false) {
-        $terreno  =  $remateArray[$key+1];
+        $terreno  =  $remateArrayFull[$key+1];
         }  
 
         //Saco segundo notas:  
         if (stripos($item, 'notas') !== false) {
-        $notas  =  $remateArray[$key+1];
+        $notas  =  $remateArrayFull[$key+1];
         }  
         //Saco segundo notas:  
         if (stripos($item, 'ejecucion') !== false) {
-        $ejecuta  =  $remateArray[$key+1];
+        $ejecuta  =  $remateArrayFull[$key+1];
         }  
         //Saco segundo notas:  
-        if (stripos($item, 'contra ') !== false) {
-        $contra   =  $remateArray[$key+1];
+        if (stripos($item, 'contra') !== false) {
+        $contra   =  $remateArrayFull[$key+1];
         }  
+
+        //Saco segundo juzgado :  
+        if (stripos($item, 'juzgado') !== false) {
+        $juzgado    =  $remateArrayFull[$key+1];
+        } 
         //Saco segundo expediente:  
         if (stripos($item, 'expediente') !== false) {
-        $expediente   =  $remateArray[$key+1];
-        }  
-        //Saco segundo juzgado :  
-        if (stripos($item, 'juzgado ') !== false) {
-        $juzgado    =  $remateArray[$key+1];
-        }  
+          $expediente   =  $remateArrayFull[$key+1];
+          }   
         //Saco segundo publicacion: :  
         if (stripos($item, 'publicacion') !== false) {
-        $publicacion    =  $remateArray[$key+1];
+        $publicacion    =  $remateArrayFull[$key+1];
         }  
        } 
-       //Imprimo carecteristicas vehiculo
+
+
+       $value = array(
+        'numero_boletin'        => $boletingId,
+        'remateidnumber'        => $rematID,
+        'precio'                => $precio,
+        'precio_numeral'        => wordsToNumber(' '.$precio),
+        'fechadelTextual'        => $fechadelTextual,
+        'fechadelNumeral'        => $fechadelNumeral,
+        'hora'                   => $hora,
+        'matricula'              => $matricula,
+        'derecho'                => $derecho,
+        'expediente'             => $expediente,
+        'canton'                 => $canton,
+        'provincia'              => $provincia,
+        'distrito'               => $distrito,
+        'mide'                   => $mide,
+        'colinda'                => $colinda,
+        'plano'                  => $plano,
+        'terreno'                => $terreno,
+        'gravamenes'            => $gravamenes1.' '.$gravamenes2,
+        'tipo_de_remate'        => $tipoDeRemate,
+        'moneda'                => $moneda,
+        'rematante'             => $ejecuta,
+        'rematado'              => $contra,
+        'juzgado'               => $juzgado,
+        'expediente'            => $expediente,
+        'notas'                 => $notas,
+        'remateDetalle'         => $item,
+        'publicacion'           => $publicacion,
+    );
+
+
+       //Imprimo carecteristicas propiedad
        echo '<br>'.
+       '<br> <b>post ID: </b>'.$rematID.
        '<br> <b>Price: </b>'.$precio.
+       'tipo_de_remate'        .'propiedad',
        '<br><b>gravamen: </b>'.$gravamenes1.' '.$gravamenes2.
        '<br><b>matricula: </b>'.$matricula.' derecho:'.$derecho,
-       '<br><b>provincia: </b>'.$provincia,
-       '<br><b>distrito: </b>'.$distrito,
-       '<br><b>provincia: </b>'.$canton,
-       '<br><b>$mide: </b>'.$mide,
-       '<br><b>$colinda: </b>'.$colinda,
-       '<br><b>$plano: </b>'.$plano,
        '<br><b>$horaRemate: </b>'.$horaRemate,
-       '<br><b>terreno: </b>'.$terreno,
-       '<br><b>expediente: </b>'.$expediente,
        '<br><b>$ejecuta : </b>'.$ejecuta,
        '<br><b>$contra : </b>'.$contra,
        '<br><b>juzgado : </b>'.$juzgado,
        '<br><b>publicacion : </b>'.$publicacion,
+       '<br><b>expediente: </b>'.$expediente,
        '<br><b>notas: </b>'.$notas,
+       
+       '<br><b>provincia: </b>'.$provincia,
+       '<br><b>distrito: </b>'.$distrito,
+       '<br><b>canton: </b>'.$canton,
+       '<br><b>$mide: </b>'.$mide,
+       '<br><b>$colinda: </b>'.$colinda,
+       '<br><b>$plano: </b>'.$plano,
+       '<br><b>terreno: </b>'.$terreno,
        '<br>---------<br>';
       }
 
+     // }
+
+
+
+
+        //Creo post
+        if($postRemates){
+         echo '**************************** insertPost';
+          insertPost($value, $tags);
+         }else{
+          //crea boxes para visualisar
+          reviewRemates($value);
+         }
 
     }
     
@@ -304,18 +517,6 @@ $capacidad;
 
     
     
-    
-    
-     $remates = array(
-    
-      // array(
-        //    "id"  => "",
-      //     "name" => "Peter Parker",
-      //     "email" => "peterparker@mail.com",
-      // ),
-   
-  );
-
  
 
 
@@ -326,7 +527,7 @@ function sample_admin_notice__success($post) {
   $postid = $post->ID;
 
   if ($postid===3331) {
-    $date               = get_field( "fecha");
+    $date              = get_field( "fecha");
     $loaded_Acf        = get_field( "load_pdf");
     $loaded_Acf_leng   = strlen($loaded_Acf);
     //Check date if is full get data from imprentanacional
@@ -336,34 +537,6 @@ function sample_admin_notice__success($post) {
 }
 add_action( 'admin_notices', 'sample_admin_notice__success' );
 
-
-
-function checkDateAndGetData($date, $loaded_Acf_leng){
-
-    if(strlen($date) > 0){
-          //1  get DOM from URL or file
-          $url = 'https://www.imprentanacional.go.cr/boletin/?date='.$date;
-          scraping_generic($url, $search);
-    }
-
-    // no hay data buscar cuando carga
-    if($loaded_Acf_leng === 0){
-      mensaje('no hay data checkiar si ya llego');
-    }
-    //
-
-}
-
-
-
-
-
-function quitar_tildes($cadena) {
-  $no_permitidas= array ("á","é","í","ó","ú","Á","É","Í","Ó","Ú","ñ","À","Ã","Ì","Ò","Ù","Ã™","Ã ","Ã¨","Ã¬","Ã²","Ã¹","ç","Ç","Ã¢","ê","Ã®","Ã´","Ã»","Ã‚","ÃŠ","ÃŽ","Ã”","Ã›","ü","Ã¶","Ã–","Ã¯","Ã¤","«","Ò","Ã","Ã„","Ã‹");
-  $permitidas= array ("a","e","i","o","u","A","E","I","O","U","n","N","A","E","I","O","U","a","e","i","o","u","c","C","a","e","i","o","u","A","E","I","O","U","u","o","O","i","a","e","U","I","A","E");
-  $texto = str_replace($no_permitidas, $permitidas ,$cadena);
-  return $texto;
-  }
 
 
 
@@ -484,38 +657,30 @@ function scraping_generic($url, $search) {
       if(!$loaded_Acf){
         $blockRemates = htmlspecialchars_decode(get_field('load_pdf'));
       }
-
-
+      
+     
      $blockRemates = explode('rrrr', $blockRemates);
      makeRemates($blockRemates);
-     echo 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-     //var_dump($blockRemates);
-    
-
-      /*********** BUSCO LOS P de segunda publicacion ***********/
-       
-
-
-
+  
         ?>
 
-        <script>
-          // jQuery(document).ready(function($) {
-
-          //   console.log('blockRaw');
-          //   //Meto el html que viene de remates en  Json
-          //   let myHtml = <?php echo json_encode($html2); ?>;
-          //   //console.log(myHtml); 
-          //   console.log('blockRaw2xxxx');
-          //   // console.log(blockRaw);
-          //   //jQuery("h2").css("background-color","red");
-          // });
-        </script>
-       <?php
-      //TRIBUNALES DE TRABAJO termina con Títulos supletorios
 
 
 
+      <script>
+        // jQuery(document).ready(function($) {
+
+        //   console.log('blockRaw');
+        //   //Meto el html que viene de remates en  Json
+        //   let myHtml = <?php echo json_encode($html2); ?>;
+        //   //console.log(myHtml); 
+        //   console.log('blockRaw2xxxx');
+        //   // console.log(blockRaw);
+        //   //jQuery("h2").css("background-color","red");
+        // });
+      </script>
+      <?php
+     
 
       ///////////////busco boletines anteriores y actualizo
         $boletinesMetidos   = get_field( "boletinesMetidos");
@@ -549,8 +714,26 @@ function scraping_generic($url, $search) {
 
 
   
+function checkDateAndGetData($date, $loaded_Acf_leng){
 
-function mensaje($msn){
+  if(strlen($date) > 0){
+        //1  get DOM from URL or file
+        $url = 'https://www.imprentanacional.go.cr/boletin/?date='.$date;
+        scraping_generic($url, $search);
+  }
+
+  // no hay data buscar cuando carga
+  if($loaded_Acf_leng === 0){
+    mensaje('no hay data checkiar si ya llego');
+  }
+  //
+
+}
+
+
+
+
+      function mensaje($msn){
   ?>
   <div class="notice notice-success is-dismissible">
       <p><?php _e($msn , 'sample-text-domain' ); ?></p>
@@ -575,6 +758,49 @@ add_action('template_redirect', function() {
  });
 
 
+  
+ function insertPost($value, $tags){
+
+   // MARIO SACAR SI ES VEHICULO O SI ES PROPIEDAD TIENEN CARACTERISCAS DIFEREMTE
+  $postTitle = $value['remateidnumber'];
+  $post_title = sanitize_title( $postTitle );
+
+    // unhook this function so it doesn't loop infinitely
+    remove_action('save_post', 'insertPost');
+
+
+    if( $value['remateidnumber'] != '' ){
+
+        // Inserto un post y despues actualiso datos
+        $post_id = array( 
+        'post_parent'   => 1,
+        'post_title'    =>  $value['remateidnumber'],
+        'post_status'   => 'publish',
+        'post_author'   => 1,
+        'post_category' => 1,
+        'tags_input'    => $tags,
+        );
+
+
+        ////ACTUALIZO LOS ACF 
+        if( post_exists( $post_title ) ){
+        echo '<br>si existe! pueden estar en trash '.$post_title;
+        var_dump($post_id);
+        }else{
+        echo 'no existe. postiando... '.$post_title.'<br>';
+        $postID = wp_insert_post( $post_id );  //como no exite lo inserto
+        update_field('postgroup', $value, $postID);
+        }
+
+
+    }else{
+      echo ('there is not ids'); 
+    }
+
+    // re-hook this function
+    add_action('save_post', 'insertPost');
+
+}
 
 
   ?>
